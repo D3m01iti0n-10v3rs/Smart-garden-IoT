@@ -20,8 +20,8 @@ const char* CONF1_PASS = "77777777";
 const char* CONF2_SSID = "That whosoever believeth in him";
 const char* CONF2_PASS = "77777777";
 
-WebServer configServer1(80);
-WebServer configServer2(80);
+WebServer configServer1(80); // for ap1 lets user enter wifi creds
+WebServer configServer2(80); // for ap2 lets other devices fetch wifi creds
  
 String savedSSID = "";
 String savedPass = "";
@@ -36,13 +36,15 @@ struct sensorData{
 };
 struct sensorData sensor = {0, 0, 0, 0, 0};
 
+// store command from server
 struct PendingCmd{
   int id;
   char cmd[16];
   float value;
 };
 QueueHandle_t cmd_queue;
- 
+
+// page for user to enter wifi creds
 void handleRoot() {
   configServer1.send(200, "text/html",
     "<!DOCTYPE html><html><head>"
@@ -87,8 +89,8 @@ void handleRoot() {
 }
  
 void handleSave() {
-  savedSSID  = configServer1.arg("ssid");
-  savedPass  = configServer1.arg("pass");
+  savedSSID = configServer1.arg("ssid");
+  savedPass = configServer1.arg("pass");
   credsSaved = true;
   configServer1.send(200, "text/html",
     "<html><body style='font-family:Arial;padding:20px;'>"
@@ -108,6 +110,7 @@ void handleCreds() {
   configServer2.send(200, "application/json", json);
 }
 
+// ack and nacks from cam and pi
 bool camAck = false;
 bool serverAck = false;
 void handleACK() {
@@ -145,6 +148,7 @@ uint8_t pending_cmd = 0x00;
 SemaphoreHandle_t server_mutex;
 SemaphoreHandle_t serial2_mutex;
 
+// handle wifi
 static EventGroupHandle_t wifi_event_group;
 static const EventBits_t  WIFI_CONNECTED_BIT = BIT0;
 static uint8_t wifi_fail_count = 0;
@@ -172,6 +176,7 @@ static void wifi_event_handler(WiFiEvent_t event) {
   }
 }
 
+// callbacks
 void on_device_update(const char* deviceID, int value) {
     Serial.printf("device %s -> %d\n", deviceID, value);
 }
@@ -189,6 +194,7 @@ void on_response(JsonDocument& doc) {
   }
 }
 
+// call server_loop()
 void server_keepalive_task(void* parameter) {
   xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
   for (;;) {
@@ -201,6 +207,7 @@ void server_keepalive_task(void* parameter) {
   }
 }
 
+// request data from stm
 void sensor_task(void * parameter) {
   xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
   String data;
@@ -243,7 +250,7 @@ void sensor_task(void * parameter) {
   }
 }
 
-
+// foward command to stm
 void cmd_task(void* parameter) {
   PendingCmd pending;
   String data;
@@ -287,7 +294,7 @@ void cmd_task(void* parameter) {
         }
         vTaskDelay(pdMS_TO_TICKS(10));
       }
-      data = Serial2.readStringUntil('\n');
+      data= Serial2.readStringUntil('\n');
       data.trim();
       Serial.printf("[CMD TASK] STM RESPOND: %s\r\n", data.c_str());
 
@@ -319,10 +326,9 @@ void setup() {
   configServer2.on("/ack", HTTP_POST, handleACK);
   configServer2.on("/nack", HTTP_POST, handleNACK);
 
-
-  // test portion ==============================================================================
+  
   AP1:
-  syncFailed = false;
+  syncFailed =false;
   camAck = false;
   serverAck = false;
 
@@ -330,9 +336,11 @@ void setup() {
   IPAddress apGateway(10, 0, 0, 1);
   IPAddress apSubnet(255, 255, 255, 0);
 
+  // keep looping until user enters corect wifi
   while (1) {
     credsSaved = false;
-    
+
+   // open ap1 for user to entr creds
     WiFi.mode(WIFI_AP_STA);
     WiFi.softAPConfig(apIP, apGateway, apSubnet);
     WiFi.softAP(CONF1_SSID, CONF1_PASS);
@@ -349,6 +357,7 @@ void setup() {
 
     bool connected = false;
 
+    // big ass loop to check if the user's creds is correct 
     for (int attempt = 1; attempt <= 5; attempt++) {
 
       Serial.printf("[WIFI] Attempt %d connecting to %s\n",
@@ -384,6 +393,7 @@ void setup() {
     Serial.println("[WIFI] All attempts failed, reopening config AP");
   }
 
+ // ap2 for other devices to fetch creds
   WiFi.disconnect(false);
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAPConfig(apIP, apGateway, apSubnet);
@@ -394,6 +404,7 @@ void setup() {
 
 
   // real implementation
+ // if 1 nack is received go back to ap1 to enter different wifi creds
   while (!(camAck && serverAck) && !syncFailed) {
     configServer2.handleClient();
     delay(10);
@@ -409,6 +420,7 @@ void setup() {
   // test cam ack only
   */
 
+  
   if (syncFailed) {
     Serial.println("[SYNC] Device reported failure");
     configServer2.stop();
@@ -464,6 +476,7 @@ void setup() {
     return;
   }
 
+  // attach callbacks
   server_on_response(on_response);
   server_on_device_update(on_device_update);
   server_connect(WS_HOST, WS_PORT, WS_PATH);
