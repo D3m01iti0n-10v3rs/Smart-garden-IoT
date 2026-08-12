@@ -1,0 +1,24 @@
+{
+  "name": "iot-dashboard",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.iot.dashboard",
+    "productName": "IoT Dashboard",
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "src/**"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^36.0.0",
+    "electron-builder": "^26.0.0"
+  }
+}

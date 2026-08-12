@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Garden GUI</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F1F8E9;
+      --panel-bg: #FFFFFF;
+      --text: #1B5E20;
+      --accent: #388E3C;
+      --accent-hover: #2E7D32;
+      --success: #43A047;
+      --danger: #E53935;
+      --border: #C8E6C9;
+      --text-muted: #558B2F;
+      --header-bg: #2E7D32;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: grid;
+      grid-template-columns: 200px 1fr 200px;
+      align-items: center;
+      background: var(--header-bg);
+      padding: 10px 24px;
+      border-bottom: 3px solid #1B5E20;
+    }
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-logo img {
+      height: 52px;
+      width: auto;
+    }
+    .header-title {
+      text-align: center;
+    }
+    .header-title h1 {
+      color: #fff;
+      font-size: 1.3em;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .header-title p {
+      color: #A5D6A7;
+      font-size: 0.78em;
+      margin-top: 2px;
+    }
+    .header-right {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .status {
+      padding: 5px 14px;
+      border-radius: 2px;
+      font-weight: 600;
+      font-size: 0.85em;
+    }
+    .status.connected { background: #C8E6C9; color: #1B5E20; }
+    .status.disconnected { background: #FFCDD2; color: #B71C1C; }
+
+    /* ── TABS ── */
+    .tab-bar {
+      display: flex;
+      background: #fff;
+      border-bottom: 2px solid var(--border);
+      padding: 0 24px;
+    }
+    .tab-btn {
+      padding: 12px 28px;
+      border: none;
+      background: none;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.92em;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s;
+    }
+    .tab-btn:hover { color: var(--accent); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── TAB CONTENT ── */
+    .tab-content { display: none; padding: 24px; }
+    .tab-content.active { display: block; }
+
+    /* ── PANELS ── */
+    .panel {
+      background: var(--panel-bg);
+      padding: 20px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .panel h2 {
+      font-size: 1em;
+      font-weight: 600;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .panel h3 {
+      font-size: 0.9em;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin: 16px 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+    /* ── FORMS ── */
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.82em;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    input[type="number"], select {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      background: #F9FBE7;
+      color: var(--text);
+      border-radius: 2px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.9em;
+    }
+    input[type="number"]:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    input[type="range"] {
+      width: 100%;
+      margin-bottom: 14px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 2px;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.88em;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:disabled { background: #A5D6A7; cursor: not-allowed; }
+    .btn-full { width: 100%; }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* ── AUTO MODE ── */
+    .auto-mode-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #E8F5E9;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+    }
+    .auto-mode-bar strong { font-size: 0.95em; }
+    .auto-mode-bar select {
+      width: auto;
+      margin: 0;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    /* ── DEVICE BUTTONS ── */
+    .device-btn {
+      background: #f1a7a7;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 14px 10px;
+      border-radius: 2px;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .device-btn.active {
+      border-color: var(--success);
+      background: #E8F5E9;
+      color: var(--success);
+      font-weight: 600;
+    }
+    .device-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── CAMERA ── */
+    #camera-feed {
+      width: 100%;
+      height: auto;
+      background: #E8F5E9;
+      border-radius: 2px;
+      aspect-ratio: 4/3;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    /* ── CHARTS ── */
+    .chart-box {
+      background: var(--panel-bg);
+      padding: 16px;
+      border-radius: 3px;
+      height: 240px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+    canvas { width: 100% !important; height: 100% !important; }
+
+    /* ── SENSOR VALUES (Dashboard tab) ── */
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .sensor-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .sensor-card .s-label {
+      font-size: 0.75em;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .sensor-card .s-val {
+      font-size: 1.6em;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 4px 0 2px;
+    }
+    .sensor-card .s-unit {
+      font-size: 0.75em;
+      color: var(--text-muted);
+    }
+
+    .msg { font-size: 0.85em; font-weight: 600; margin-left: 10px; transition: opacity 0.3s; }
+    .hint { font-size: 0.78em; color: #888; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo">
+      <img src="logo_hcmute_bg.png" alt="HCM-UTE Logo">
+    </div>
+    <div class="header-title">
+      <h1>Smart Garden Dashboard</h1>
+    </div>
+    <div class="header-right">
+      <span id="conn-status" class="status disconnected">Disconnected</span>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('controls')">Controls</button>
+    <button class="tab-btn" onclick="switchTab('camera')">Camera</button>
+    <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+  </div>
+
+  <!-- TAB: DASHBOARD -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div class="sensor-grid">
+      <div class="sensor-card">
+        <div class="s-label">Temperature</div>
+        <div class="s-val" id="sv-temp">--</div>
+        <div class="s-unit">°C</div>
+      </div>
+      <div class="sensor-card">
+        <div class="s-label">Air Humidity</div>
+        <div class="s-val" id="sv-humid">--</div>
+        <div class="s-unit">%</div>
+      </div>
+      <div class="sensor-card">
+        <div class="s-label">Soil Humidity</div>
+        <div class="s-val" id="sv-soil">--</div>
+        <div class="s-unit">%</div>
+      </div>
+      <div class="sensor-card">
+        <div class="s-label">Water Tank</div>
+        <div class="s-val" id="sv-water">--</div>
+        <div class="s-unit">mm</div>
+      </div>
+    </div>
+
+    <div class="auto-mode-bar" style="margin-bottom:16px;">
+      <strong>Chart Time Range</strong>
+      <select id="scale-select" onchange="changeScale()">
+        <option value="720">Last 720 samples (1h)</option>
+        <option value="2160">Last 2160 samples (3h)</option>
+        <option value="4320">Last 4320 samples (6h)</option>
+        <option value="8640">Last 8640 samples (12h)</option>
+        <option value="17280">Last 17280 samples (1d)</option>
+        <option value="51840" selected>Last 51840 samples (3d)</option>
+      </select>
+    </div>
+
+    <div class="chart-box"><canvas id="chart-temp"></canvas></div>
+    <div class="chart-box"><canvas id="chart-humid"></canvas></div>
+    <div class="chart-box"><canvas id="chart-soil"></canvas></div>
+    <div class="chart-box"><canvas id="chart-water"></canvas></div>
+  </div>
+
+  <!-- TAB: CONTROLS -->
+  <div class="tab-content" id="tab-controls">
+    <div class="panel">
+      <h2>Automation Mode</h2>
+      <div class="auto-mode-bar">
+        <strong>Automation Mode</strong>
+        <select id="auto-mode" onchange="toggleAutoMode()">
+          <option value="true">ON — Auto</option>
+          <option value="false">OFF — Manual</option>
+        </select>
+      </div>
+      <h2>Manual Overrides</h2>
+      <span id="ctrl-msg" class="msg" style="color: var(--danger);"></span>
+      <div class="btn-row" style="margin-top:10px;">
+        <button id="btn-fan1" class="device-btn" onclick="toggleRelay(1)"> Fan 1 (Off)</button>
+        <button id="btn-fan2" class="device-btn" onclick="toggleRelay(2)"> Fan 2 (Off)</button>
+        <button id="btn-light" class="device-btn" onclick="toggleRelay(4)"> Light (Off)</button>
+        <button id="btn-pump" class="device-btn" onclick="toggleRelay(8)"> Pump (Off)</button>
+      </div>
+      <p class="hint">* Automation Mode must be OFF to use manual controls.</p>
+    </div>
+  </div>
+
+  <!-- TAB: CAMERA -->
+  <div class="tab-content" id="tab-camera">
+    <div class="two-col">
+      <div class="panel">
+        <h2>Camera Feed</h2>
+        <img id="camera-feed" src="" alt="No signal" />
+      </div>
+      <div>
+        <div class="panel">
+          <h2>Pan & Tilt</h2>
+          <label>Pan (X-Axis): <span id="val-pan" style="color:var(--accent);font-weight:600;">90</span>°</label>
+          <input type="range" id="cam-pan" min="0" max="180" value="90"
+            oninput="updateServoDisplay('pan', this.value)"
+            onchange="sendServoCommand('X', this.value)">
+          <label>Tilt (Y-Axis): <span id="val-tilt" style="color:var(--accent);font-weight:600;">90</span>°</label>
+          <input type="range" id="cam-tilt" min="0" max="180" value="90"
+            oninput="updateServoDisplay('tilt', this.value)"
+            onchange="sendServoCommand('Y', this.value)">
+        </div>
+        <div class="panel">
+          <h2>Camera Settings</h2>
+          <div class="btn-row">
+            <div>
+              <label>Quality (0-63)</label>
+              <input type="number" id="cam-quality" value="10" min="0" max="63">
+            </div>
+            <div>
+              <label>Frame Size</label>
+              <select id="cam-framesize">
+                <option value="VGA">VGA (640x480)</option>
+                <option value="XGA">XGA (1024x768)</option>
+                <option value="UXGA" selected>UXGA (1600x1200)</option>
+              </select>
+            </div>
+          </div>
+          <div class="btn-row">
+            <div>
+              <label>V-Flip</label>
+              <select id="cam-vflip">
+                <option value="0">Off</option>
+                <option value="1">On</option>
+              </select>
+            </div>
+            <div>
+              <label>H-Mirror</label>
+              <select id="cam-hmirror">
+                <option value="0">Off</option>
+                <option value="1">On</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-full" onclick="applyCameraSettings()">Apply Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SETTINGS -->
+  <div class="tab-content" id="tab-settings">
+    <div class="panel" style="max-width: 640px;">
+      <h2>Automation Thresholds</h2>
+      <div class="btn-row">
+        <div><label>Soil Min (%)</label><input type="number" id="th-soilMin"></div>
+        <div><label>Soil Max (%)</label><input type="number" id="th-soilMax"></div>
+      </div>
+      <div class="btn-row">
+        <div><label>Temp Min (°C)</label><input type="number" id="th-tempMin"></div>
+        <div><label>Temp Max (°C)</label><input type="number" id="th-tempMax"></div>
+      </div>
+      <div class="btn-row">
+        <div><label>Humid Min (%)</label><input type="number" id="th-humidMin"></div>
+        <div><label>Humid Max (%)</label><input type="number" id="th-humidMax"></div>
+      </div>
+      <div class="btn-row">
+        <div><label>Light Start (Hour)</label><input type="number" id="th-lightStart" min="0" max="23"></div>
+        <div><label>Light End (Hour)</label><input type="number" id="th-lightEnd" min="0" max="23"></div>
+      </div>
+      <div><label>Min Water Tank Height (mm)</label><input type="number" id="th-minVolumeML"></div>
+      <button class="btn" onclick="saveThresholds()">Save Thresholds</button>
+      <span id="th-msg" class="msg" style="color: var(--success);"></span>
+    </div>
+  </div>
+
+  <script>
+    const wsUrl ='ws://raspberrypiserver:3000/ui_clients';
+
+    let ws;
+    let isAutoMode = true;
+    let currentRelayState = 0;
+
+    // ── TAB SWITCHING ──
+    function switchTab(name) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    // ── WEBSOCKET ──
+    function connectWS() {
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = "blob";
+
+      ws.onopen = () => {
+        document.getElementById('conn-status').className = 'status connected';
+        document.getElementById('conn-status').innerText = 'Connected';
+        setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify({ type: "sensors.get" }));
+        }, 2000);
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof Blob) {
+          const feed = document.getElementById('camera-feed');
+          const oldUrl = feed.src;
+          feed.src = URL.createObjectURL(event.data);
+          if (oldUrl && oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
+          return;
+        }
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "config.data") updateConfigUI(msg);
+          else if (msg.type === "sensors.data") updateCharts(msg.rows);
+          else if (msg.type === "devices.changed") {
+            currentRelayState = msg.currentRelayState;
+            updateRelayButtons();
+          }
+        } catch (err) { console.error("WS parse error", err); }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('conn-status').className = 'status disconnected';
+        document.getElementById('conn-status').innerText = 'Disconnected';
+        setTimeout(connectWS, 3000);
+      };
+    }
+
+    // ── CHARTS ──
+    const maxDataPoints = 51840;
+    let displayScale = 51840;
+
+    const sensorHistory = {
+      soil_humidity: new Map(),
+      water_level: new Map(),
+      temperature: new Map(),
+      humidity: new Map()
+    };
+
+    Chart.defaults.color = '#1B5E20';
+    const charts = {};
+
+    function initChart(ctxId, label, color, min, max) {
+      const ctx = document.getElementById(ctxId).getContext('2d');
+      charts[ctxId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label,
+            data: [],
+            borderColor: color,
+            tension: 0.3,
+            pointRadius: 2,
+            fill: true,
+            backgroundColor: color + '22'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: { display: true, ticks: { color: '#558B2F', maxTicksLimit: 10 } },
+            y: { min, max, grid: { color: '#C8E6C9' }, ticks: { color: '#558B2F' } }
+          },
+          plugins: { legend: { labels: { color: '#1B5E20' } } }
+        }
+      });
+    }
+
+    initChart('chart-soil',  'Soil Humidity (%)',     '#ff9800', 0, 100);
+    initChart('chart-water', 'Water Tank Level (mm)', '#2196f3', 0, 70);
+    initChart('chart-temp',  'Temperature (°C)',      '#f44336', 0, 50);
+    initChart('chart-humid', 'Air Humidity (%)',      '#00bcd4', 0, 100);
+    
+    function updateCharts(rows) {
+      const orderedRows = [...rows].sort((a, b) => a.id - b.id); // oldest -> newest
+      const latest = {};
+
+      orderedRows.forEach(row => {
+        if (!sensorHistory[row.type]) return;
+
+        // Use id so same-second timestamps do not overwrite each other
+        sensorHistory[row.type].set(row.id, {
+          timestamp: row.timestamp,
+          value: row.value
+        });
+
+        latest[row.type] = row.value;
+      });
+
+      if (latest.temperature   !== undefined) document.getElementById('sv-temp').innerText  = latest.temperature;
+      if (latest.humidity      !== undefined) document.getElementById('sv-humid').innerText = latest.humidity;
+      if (latest.soil_humidity !== undefined) document.getElementById('sv-soil').innerText  = latest.soil_humidity;
+      if (latest.water_level   !== undefined) document.getElementById('sv-water').innerText = latest.water_level;
+
+      for (const dataMap of Object.values(sensorHistory)) {
+        while (dataMap.size > maxDataPoints) {
+          const oldestKey = dataMap.keys().next().value;
+          dataMap.delete(oldestKey);
+        }
+      }
+
+      renderAllCharts();
+    }
+
+    function renderAllCharts() {
+      const mapIds = {
+        soil_humidity: 'chart-soil',
+        water_level: 'chart-water',
+        temperature: 'chart-temp',
+        humidity: 'chart-humid'
+      };
+
+      for (const [type, dataMap] of Object.entries(sensorHistory)) {
+        const chartId = mapIds[type];
+        if (!charts[chartId] || dataMap.size === 0) continue;
+
+        const keys = Array.from(dataMap.keys());
+        const displayKeys = keys.length > displayScale ? keys.slice(-displayScale) : keys;
+
+        charts[chartId].data.labels = displayKeys.map(id => dataMap.get(id).timestamp);
+        charts[chartId].data.datasets[0].data = displayKeys.map(id => dataMap.get(id).value);
+        charts[chartId].update();
+      }
+    }
+
+    function changeScale() {
+      displayScale = Number(document.getElementById('scale-select').value);
+      renderAllCharts();
+    }
+
+    // ── UI HELPERS ──
+    function showMsg(id, text) {
+      const el = document.getElementById(id);
+      el.innerText = text; el.style.opacity = 1;
+      setTimeout(() => { el.style.opacity = 0; }, 3000);
+    }
+
+    function updateConfigUI(msg) {
+      isAutoMode = msg.isAutoMode;
+      currentRelayState = msg.currentRelayState;
+      document.getElementById('auto-mode').value = isAutoMode.toString();
+      updateRelayButtons();
+      if (msg.config) {
+        ['soilMin','soilMax','tempMin','tempMax','humidMin','humidMax','lightStart','lightEnd','minVolumeML']
+          .forEach(k => { document.getElementById('th-' + k).value = msg.config[k]; });
+      }
+    }
+
+    function updateRelayButtons() {
+      [
+        { id: 'btn-fan1',  bit: 1, name: ' Fan 1' },
+        { id: 'btn-fan2',  bit: 2, name: ' Fan 2' },
+        { id: 'btn-light', bit: 4, name: ' Light' },
+        { id: 'btn-pump',  bit: 8, name: ' Pump'  }
+      ].forEach(b => {
+        const el = document.getElementById(b.id);
+        const isOn = (currentRelayState & b.bit) !== 0;
+        el.className = 'device-btn' + (isOn ? ' active' : '');
+        el.innerText = b.name + (isOn ? ' (ON)' : ' (Off)');
+        el.disabled = isAutoMode;
+      });
+    }
+
+    function toggleAutoMode() {
+      const val = document.getElementById('auto-mode').value === 'true';
+      isAutoMode = val;
+      updateRelayButtons();
+      ws.send(JSON.stringify({ type: "config.update", isAutoMode: val }));
+    }
+
+    function toggleRelay(bitFlag) {
+      if (isAutoMode) { showMsg('ctrl-msg', 'Disable Auto Mode first!'); return; }
+      currentRelayState ^= bitFlag;
+      updateRelayButtons();
+      ws.send(JSON.stringify({ type: "commands.insert", cmd: "RLY", value: currentRelayState }));
+    }
+
+    function saveThresholds() {
+      const get = id => Number(document.getElementById(id).value);
+      ws.send(JSON.stringify({
+        type: "config.update",
+        thresholds: {
+          soilMin: get('th-soilMin'), soilMax: get('th-soilMax'),
+          tempMin: get('th-tempMin'), tempMax: get('th-tempMax'),
+          humidMin: get('th-humidMin'), humidMax: get('th-humidMax'),
+          lightStart: get('th-lightStart'), lightEnd: get('th-lightEnd'),
+          minVolumeML: get('th-minVolumeML')
+        }
+      }));
+      showMsg('th-msg', 'Settings Saved!');
+    }
+
+    function applyCameraSettings() {
+      ws.send(JSON.stringify({
+        type: "camera.settings",
+        quality: Number(document.getElementById('cam-quality').value),
+        framesize: document.getElementById('cam-framesize').value,
+        vflip: parseInt(document.getElementById('cam-vflip').value),
+        hmirror: parseInt(document.getElementById('cam-hmirror').value)
+      }));
+    }
+
+    function updateServoDisplay(axis, value) {
+      document.getElementById('val-' + axis).innerText = value;
+    }
+
+    function sendServoCommand(axis, value) {
+      value = Number(value);
+
+      if (axis === 'Y') {
+        value = 180 - value;
+      }
+      ws.send(JSON.stringify({ type: "commands.insert", cmd: 'SR' + axis, value: Number(value) }));
+    }
+
+    connectWS();
+  </script>
+</body>
+</html>
